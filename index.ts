@@ -29,14 +29,15 @@ async function generateQRCode(
     .toBuffer();
   const processedImageBuffer = await sharp(processedImage)
     // .greyscale()
-    .composite([{
-      input: Buffer.from([255, 255, 255, 150]),
-      raw: {
-        width: 1,
-        height: 1,
-        channels: 4
-      },
-      tile: true,
+    .composite([
+      {
+        input: Buffer.from([255, 255, 255, 150]),
+        raw: {
+          width: 1,
+          height: 1,
+          channels: 4,
+        },
+        tile: true,
         blend: "over",
       },
     ])
@@ -45,28 +46,67 @@ async function generateQRCode(
   // Create a mask from the QR code
   const qrCodeMask = await sharp(qrCodeBuffer)
     .ensureAlpha()
-    .negate()
+    // .negate()
     .threshold(128)
     .toBuffer();
 
   // await sharp(qrCodeMask).toFile(outputFile);
 
+  const blends = [
+    "clear",
+    "source",
+    "over",
+    "in",
+    "out",
+    "atop",
+    "dest",
+    "dest-over",
+    "dest-in",
+    "dest-out",
+    "dest-atop",
+    "xor",
+    "add",
+    "saturate",
+    "multiply",
+    "screen",
+    "overlay",
+    "darken",
+    "lighten",
+    "color-dodge",
+    "colour-dodge",
+    "color-burn",
+    "colour-burn",
+    "hard-light",
+    "soft-light",
+    "difference",
+    "exclusion",
+  ];
+
+  // for (const blend of blends) {
   const qrMasked = await sharp(processedImage)
     // .ensureAlpha()
-    .joinChannel(qrCodeMask)
+    // .joinChannel(qrCodeMask)
+    .composite([
+      {
+        input: qrCodeMask,
+        blend: "add",
+      },
+    ])
     .png()
     .toBuffer();
 
+  // for (const blend of blends) {
   const final = await sharp(processedImageBuffer)
     .composite([
       {
         input: qrMasked,
-
+        blend: "multiply", // exclusion, burn, hard-light, in, multiply
       },
     ])
     .toBuffer();
 
-  await sharp(final).toFile(outputFile);
+  await sharp(final).toFile(`${outputFile}`);
+
   return;
 
   // Apply the mask to the input image
