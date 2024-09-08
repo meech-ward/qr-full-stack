@@ -1,15 +1,18 @@
 import qr from "qrcode";
 import sharp, { type Blend } from "sharp";
 
-export async function generateQRCode(text: string, imageBuffer: ArrayBuffer, outputPath: string) {
-  
+export async function generateQRCode(
+  text: string,
+  imageBuffer: ArrayBuffer,
+  outputPath: string
+) {
+  const outputFileNames = [];
+
   const qrCodeBuffer = await qr.toBuffer(text, {
     type: "png",
     errorCorrectionLevel: "H",
     scale: 10,
   });
-  
-  const image = sharp(imageBuffer);
 
   // Get the dimensions of the QR code
   const qrCodeMetadata = await sharp(qrCodeBuffer).metadata();
@@ -17,10 +20,11 @@ export async function generateQRCode(text: string, imageBuffer: ArrayBuffer, out
   const qrCodeHeight = qrCodeMetadata.height!;
 
   // Resize and process the input image
+  const image = sharp(imageBuffer);
   const processedImage = await image
     .resize(qrCodeWidth, qrCodeHeight, { fit: "cover" })
     .toBuffer();
-  const processedImageBuffer = await sharp(processedImage)
+  const processedBackgroundImage = await sharp(processedImage)
     // .greyscale()
     .composite([
       {
@@ -43,42 +47,8 @@ export async function generateQRCode(text: string, imageBuffer: ArrayBuffer, out
     .threshold(128)
     .toBuffer();
 
-  // await sharp(qrCodeMask).toFile(outputFile);
-
-  const blends = [
-    "clear",
-    "source",
-    "over",
-    "in",
-    "out",
-    "atop",
-    "dest",
-    "dest-over",
-    "dest-in",
-    "dest-out",
-    "dest-atop",
-    "xor",
-    "add",
-    "saturate",
-    "multiply",
-    "screen",
-    "overlay",
-    "darken",
-    "lighten",
-    "color-dodge",
-    "colour-dodge",
-    "color-burn",
-    "colour-burn",
-    "hard-light",
-    "soft-light",
-    "difference",
-    "exclusion",
-  ];
-
-  // for (const blend of blends) {
+  // mask the qr code to the normal image
   const qrMaskedLight = await sharp(processedImage)
-    // .ensureAlpha()
-    // .joinChannel(qrCodeMask)
     .composite([
       {
         input: qrCodeMask,
@@ -88,18 +58,15 @@ export async function generateQRCode(text: string, imageBuffer: ArrayBuffer, out
     .png()
     .toBuffer();
 
-  const outputFileNames = [];
-
   await sharp(qrMaskedLight).toFile(`${outputPath}-${"normal"}.png`);
   outputFileNames.push({
     name: `${outputPath}-${"normal"}.png`,
     blend: "normal",
   });
 
+  // mask the qr code to the darkened image and use that for everything
   const qrMasked = await sharp(processedImage)
     .modulate({ brightness: 0.7 }) // Darken the image by reducing brightness to 70%
-    // .ensureAlpha()
-    // .joinChannel(qrCodeMask)
     .composite([
       {
         input: qrCodeMask,
@@ -115,13 +82,14 @@ export async function generateQRCode(text: string, imageBuffer: ArrayBuffer, out
     blend: "dark",
   });
 
+  // mask the qr code to the background image
   for (const blend of [
     "multiply",
     "exclusion",
     "color-burn",
     "hard-light",
   ] as Blend[]) {
-    const final = await sharp(processedImageBuffer)
+    const final = await sharp(processedBackgroundImage)
       .composite([
         {
           input: qrMasked,
