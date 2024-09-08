@@ -40,6 +40,22 @@ export async function generateQRCode(
     ])
     .toBuffer();
 
+  const processedBackgroundImageLess = await sharp(processedImage)
+    // .greyscale()
+    .composite([
+      {
+        input: Buffer.from([255, 255, 255, 50]),
+        raw: {
+          width: 1,
+          height: 1,
+          channels: 4,
+        },
+        tile: true,
+        blend: "over",
+      },
+    ])
+    .toBuffer();
+
   // Create a mask from the QR code
   const qrCodeMask = await sharp(qrCodeBuffer)
     .ensureAlpha()
@@ -80,6 +96,22 @@ export async function generateQRCode(
   outputFileNames.push({
     name: `${outputPath}-${"dark"}.png`,
     blend: "dark",
+  });
+
+
+  // less is the less white one
+  const final = await sharp(processedBackgroundImageLess)
+  .composite([
+    {
+      input: qrMasked,
+      blend: "multiply", // exclusion, burn, hard-light, in, multiply
+    },
+  ])
+  .toBuffer();
+  await sharp(final).toFile(`${outputPath}-${"multiply-dark"}.png`);
+  outputFileNames.push({
+    name: `${outputPath}-${"multiply-dark"}.png`,
+    blend: "Multiply Dark",
   });
 
   // mask the qr code to the background image

@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
+import QRCodeGenerator from './browser-qr';
+
 
 interface OutputFile {
   name: string;
@@ -72,7 +74,7 @@ const ImageUploader: React.FC = () => {
     e.stopPropagation();
     setIsDragging(false);
     dragCounter.current = 0;
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileChange(e.dataTransfer.files[0]);
     }
@@ -132,9 +134,8 @@ const ImageUploader: React.FC = () => {
                   Upload Image
                 </label>
                 <div
-                  className={`mt-1 border-2 border-dashed rounded-md px-6 pt-5 pb-6 flex justify-center ${
-                    isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                  }`}
+                  className={`mt-1 border-2 border-dashed rounded-md px-6 pt-5 pb-6 flex justify-center ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                    }`}
                   onDragEnter={handleDragEnter}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -236,6 +237,23 @@ const ImageUploader: React.FC = () => {
                   onClick={() => {
                     // Implement download functionality here
                     console.log(`Downloading ${file.name}`);
+                    const downloadImage = async () => {
+                      try {
+                        const response = await fetch(`/api/${file.name}`);
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = file.name;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                      } catch (error) {
+                        console.error('Error downloading image:', error);
+                      }
+                    };
+                    downloadImage();
                   }}
                 >
                   Download
@@ -246,6 +264,9 @@ const ImageUploader: React.FC = () => {
           ))}
         </div>
       )}
+
+      <QRCodeGenerator />
+
     </div>
   );
 };
