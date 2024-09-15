@@ -1,19 +1,60 @@
 import qr from "qrcode";
 import sharp, { type Blend } from "sharp";
 
-export async function generateQRCode(
+// import {QRCodeCanvas, type Options} from '@loskir/styled-qr-code-node';
+
+// export async function generateQrCodeWithOptions(
+//   options: Options,
+//   imageBuffer: ArrayBuffer,
+//   outputPath: string
+// ) {
+//   // For svg type
+//   const qrCodeSvg = new QRCodeCanvas({
+//     ...options,
+//   });
+
+//   const qrCodeBuffer = await qrCodeSvg.toBuffer("png");
+//   // .then((buffer: string) => {
+//   //   writeFileSync("test.png", buffer);
+//   // });
+//   return generateQRCodeWithBuffer(qrCodeBuffer, imageBuffer, outputPath);
+// }
+
+export async function generateQrCodeWithText(
   text: string,
   imageBuffer: ArrayBuffer,
   outputPath: string
 ) {
-  const outputFileNames = [];
-
   const qrCodeBuffer = await qr.toBuffer(text, {
     type: "png",
     errorCorrectionLevel: "H",
     scale: 10,
   });
 
+  return generateQRCodeWithBuffer(qrCodeBuffer, imageBuffer, outputPath);
+}
+
+export async function generateQRCodeWithBuffer(
+  _qrCodeBuffer: Buffer | ArrayBuffer,
+  imageBuffer: ArrayBuffer,
+  outputPath: string,
+  paddingSize?: number
+) {
+  // Add padding to the QR code buffer
+  let qrCodeBuffer = !paddingSize
+    ? _qrCodeBuffer
+    : await sharp(_qrCodeBuffer)
+        .extend({
+      top: paddingSize,
+      bottom: paddingSize,
+      left: paddingSize,
+      right: paddingSize,
+      background: { r: 255, g: 255, b: 255, alpha: 1 } // White background
+    })
+    .toBuffer();
+
+
+  const outputFileNames = [];
   // Get the dimensions of the QR code
   const qrCodeMetadata = await sharp(qrCodeBuffer).metadata();
   const qrCodeWidth = qrCodeMetadata.width!;
@@ -98,20 +139,19 @@ export async function generateQRCode(
     blend: "dark",
   });
 
-
   // less is the less white one
   const final = await sharp(processedBackgroundImageLess)
-  .composite([
-    {
-      input: qrMasked,
-      blend: "multiply", // exclusion, burn, hard-light, in, multiply
-    },
-  ])
-  .toBuffer();
+    .composite([
+      {
+        input: qrMasked,
+        blend: "multiply", // exclusion, burn, hard-light, in, multiply
+      },
+    ])
+    .toBuffer();
   await sharp(final).toFile(`${outputPath}-${"multiply-dark"}.png`);
   outputFileNames.push({
     name: `${outputPath}-${"multiply-dark"}.png`,
-    blend: "Multiply Dark",
+    blend: "multiply-dark",
   });
 
   // mask the qr code to the background image
@@ -136,5 +176,12 @@ export async function generateQRCode(
       blend: blend,
     });
   }
-  return outputFileNames;
+  // Reorder the array to start with multiply-dark, multiply, normal, dark, then the rest
+  return [
+    ...outputFileNames.filter(file => file.blend === "multiply-dark"),
+    ...outputFileNames.filter(file => file.blend === "multiply"),
+    ...outputFileNames.filter(file => file.blend === "normal"),
+    ...outputFileNames.filter(file => file.blend === "dark"),
+    ...outputFileNames.filter(file => !["multiply-dark", "multiply", "normal", "dark"].includes(file.blend))
+  ];
 }
