@@ -118,11 +118,7 @@ function Index() {
   const isFirstLoad = useRef(0);
 
   useEffect(() => {
-    if (!debouncedText && !qrOptions.data) {
-      return;
-    }
-    if (isFirstLoad.current > 1) {
-      isFirstLoad.current++;
+    if (!debouncedText || !qrOptions.data || !file) {
       return;
     }
 
