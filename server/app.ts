@@ -3,6 +3,8 @@ import { logger } from "hono/logger";
 import { serveStatic } from "hono/bun";
 import { qrRoute } from "./routes/qr";
 import { shortUrlRoute } from "./routes/shortUrlRoute";
+import { assRoute } from "./routes/ass";
+
 const app = new Hono();
 
 app.use("*", logger());
@@ -26,7 +28,8 @@ uploadRoute.get(
 const apiRoutes = app
   .basePath("/api")
   .route("/qr", qrRoute)
-  .route("/uploads", uploadRoute);
+  .route("/uploads", uploadRoute)
+  .route("/ass", assRoute);
 
 app.route("/s", shortUrlRoute);
 
