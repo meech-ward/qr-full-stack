@@ -17,6 +17,8 @@ import {
 
 import crypto from "crypto";
 
+import { blends } from "../shared-types";
+
 function generateRandomHexName(length: number = 16): string {
   return crypto
     .randomBytes(Math.ceil(length / 2))
@@ -113,17 +115,10 @@ export const qrRoute = new Hono()
       });
     }
 
+    const blendsToProcess = qrData.blend ? [qrData.blend] : blends
+
     // process all other images
-    const blends = [
-      "multiply-dark",
-      "multiply",
-      "dark",
-      "normal",
-      "color-burn",
-      "exclusion",
-      "hard-light",
-    ] as const;
-    for (const blend of blends) {
+    for (const blend of blendsToProcess) {
       const buffer = await generateQR(qrImageBuffer, bgImageBuffer, blend, 30);
       const fileName = generateRandomHexName() + ".webp";
       if (qrData.save === "true" && qrData.id) {

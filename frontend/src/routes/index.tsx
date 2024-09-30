@@ -17,7 +17,7 @@ import { useDebounce } from '@/lib/useDebounce'
 import { createQrCode as createQrCodeServer, type CreateQrCodeResponse, createQrID } from '@/lib/api'
 import { getQrImageBufferBlackAndWhite } from '@/lib/getQrImageBuffer'
 import { useLocalStorage } from '@/lib/useLocalStorage'
-
+import { blends, type Blend } from '@server/shared-types'
 
 // Route component
 export const Route = createFileRoute('/')({
@@ -29,8 +29,9 @@ function Index() {
   const debouncedText = useDebounce(text, 500);
   const [file, setFile] = useState<File | undefined>(undefined)
   const [serverFiles, setServerFiles] = useState<CreateQrCodeResponse["files"]>([])
-
+  const [clearFiles, setClearFiles] = useState(false)
   const [codes, setCodes] = useLocalStorage<{ id: string, text: string }[]>('codes', [])
+  const [selectedBlend, setSelectedBlend] = useState<Blend>(blends[0])
 
   const [qrOptions, setQrOptions] = useState<Options>({
     width: 1000,
@@ -50,20 +51,26 @@ function Index() {
   })
 
   const uploadMutation = useMutation({
-    mutationFn: async () => {
-      const qrImageBuffer = await getQrImageBufferBlackAndWhite(text, qrOptions)
+    mutationFn: async (blend: Blend) => {
+      const qrImageBuffer = await getQrImageBufferBlackAndWhite(qrOptions)
       const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
       return createQrCodeServer(
         {
           qrImage: qrImageFile,
           save: "false",
+          blend: blend,
           bgImage: file,
         }
       )
     },
     onSuccess: (data) => {
       console.log(data)
-      setServerFiles(data.files)
+      if (clearFiles) {
+        setServerFiles(data.files)
+        setClearFiles(false)
+      } else {
+        setServerFiles(files => [...files, ...data.files])
+      }
     },
     onError: (error) => {
       toast.error("Error uploading image. Please try again.", {
@@ -76,7 +83,7 @@ function Index() {
     mutationFn: async () => {
       const { id } = await createQrID({ text: text })
       const url = `${window.location.origin}/s/${id}`
-      const qrImageBuffer = await getQrImageBufferBlackAndWhite(url, qrOptions)
+      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions, data: url })
       const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
       return createQrCodeServer(
         {
@@ -99,6 +106,7 @@ function Index() {
         ...options,
         data: "",
       }))
+      setSelectedBlend(blends[0])
     },
     onError: (error) => {
       toast.error("Error saving QR code. Please try again.", {
@@ -108,6 +116,7 @@ function Index() {
   })
   // Update qrOptions.data when debouncedText changes
   useEffect(() => {
+    setClearFiles(true)
     setQrOptions((options) => ({
       ...options,
       data: debouncedText,
@@ -118,13 +127,20 @@ function Index() {
   const isFirstLoad = useRef(0);
 
   useEffect(() => {
-    if (!debouncedText || !qrOptions.data || !file) {
+    if (!qrOptions.data || !file || uploadMutation.isPending || saveMutation.isPending) {
       return;
     }
+    console.log('useEffect', debouncedText, qrOptions.data, file)
 
-    uploadMutation.mutate();
+    uploadMutation.mutate(selectedBlend);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file, qrOptions, debouncedText])
+  }, [file, qrOptions.dotsOptions, qrOptions.data])
+
+
+  const getFileForBlend = useCallback((blend: Blend) => {
+    console.log('getFileForBlend', blend)
+    uploadMutation.mutate(blend);
+  }, [uploadMutation])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -189,7 +205,7 @@ function Index() {
               </div>
             </div>
           </div>
-          <Button onClick={saveQRCode} className="w-full" disabled={!text || !file}>
+          <Button onClick={saveQRCode} className="w-full" disabled={!text || !file || uploadMutation.isPending || saveMutation.isPending}>
             {uploadMutation.isPending || saveMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -203,7 +219,9 @@ function Index() {
       </Card>
 
       <div className="flex flex-col items-center w-full mt-8">
-        <QRTabs serverFiles={serverFiles} text={text} loading={uploadMutation.isPending || saveMutation.isPending} />
+
+        <QRTabs serverFiles={serverFiles} text={text} loading={uploadMutation.isPending || saveMutation.isPending} getFileForBlend={getFileForBlend} onBlendChange={setSelectedBlend} />
+
         <div className="flex flex-col md:flex-row items-center justify-center w-full gap-8 mt-8">
           <ColorPicker
             defaultValue="#000000"
@@ -216,7 +234,9 @@ function Index() {
           />
           <div className="flex flex-col items-center gap-y-8">
             <QROptions
+              disabled={uploadMutation.isPending || saveMutation.isPending}
               onValueChange={(value) => {
+                setClearFiles(true)
                 setQrOptions((options) => ({
                   ...options,
                   dotsOptions: { ...options.dotsOptions, type: value },

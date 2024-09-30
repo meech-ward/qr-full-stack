@@ -7,8 +7,8 @@ import {
   qrUses as qrUsesTable,
 } from "../db/schema-mysql/qr";
 import { eq } from "drizzle-orm";
-import { getConnInfo } from 'hono/bun'
-
+import { getConnInfo } from "hono/bun";
+import { logger } from "../lib/logger";
 
 export const shortUrlRoute = new Hono().get("/:id", async (c) => {
   const id = c.req.param("id");
@@ -22,20 +22,31 @@ export const shortUrlRoute = new Hono().get("/:id", async (c) => {
   if (!qrCode) {
     return c.notFound();
   }
-  const info = getConnInfo(c) // info is `ConnInfo`
+  const info = getConnInfo(c); // info is `ConnInfo`
 
+  const ipAddress =
+    c.req.header("X-Forwarded-For") ||
+    c.req.header("X-Real-IP") ||
+    info.remote.address;
 
   await db.insert(qrUsesTable).values({
     qrId: qrCode.id,
-    ipAddress: info.remote.address,
+    ipAddress: ipAddress,
     userAgent: c.req.header("User-Agent"),
-    location: c.req.header("Location"),
+    location: c.req.header("Location") || c.req.header("Origin"),
     referer: c.req.header("Referer"),
   });
 
+  logger.info(`QR code ${qrCode.id} used with IP address ${ipAddress}`);
+
   if (qrCode.type === "url") {
-    return c.redirect(qrCode.content);
+    logger.info(`Redirecting to ${qrCode.content}`);
+    const hasProtocol = /^[a-zA-Z]+:\/\//.test(qrCode.content);
+    const url = hasProtocol ? qrCode.content : `https://${qrCode.content}`;
+    return c.redirect(url);
   }
+
+  logger.info(`QR code ${qrCode.id} content: ${qrCode.content}`);
 
   return c.text(qrCode.content);
 });

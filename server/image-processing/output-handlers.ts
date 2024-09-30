@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { logger } from "../lib/logger";
 
 export type ImageDetails = {
   name: string;
@@ -21,6 +22,7 @@ export const base64OutputHandler: OutputHandler = async ({
   name,
   blend,
 }) => {
+  logger.info(`Base64 Output Handler: name: ${name}, blend: ${blend}`);
   const mimeType = "image/webp";
   const base64Url = `data:${mimeType};base64,${buffer.toString("base64")}`;
   return { name, blend, url: base64Url };
@@ -32,6 +34,7 @@ export const localFileOutputHandler = (
 ): OutputHandler => {
   // Ensure the uploads directory exists
   return async ({ buffer, name, blend }) => {
+    logger.info(`Local File Output Handler: name: ${name}, blend: ${blend}`);
     await fs.mkdir(uploadsDir, { recursive: true });
     const filePath = path.join(uploadsDir, name);
     await fs.writeFile(filePath, buffer);
@@ -55,6 +58,7 @@ export const s3OutputHandler = (s3Config: {
   });
 
   return async ({ buffer, name, blend }) => {
+    logger.info(`S3 Output Handler: name: ${name}, blend: ${blend}`);
     const key = s3Config.folder ? `${s3Config.folder}/${name}` : name;
     const command = new PutObjectCommand({
       Bucket: s3Config.bucketName,

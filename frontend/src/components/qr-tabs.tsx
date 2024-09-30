@@ -1,43 +1,63 @@
 import { useState, useEffect } from 'react'
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImageQRCodeCard } from '@/components/qr-card'
+import { blends, type Blend } from '@server/shared-types'
 
 type QRTabsProps = {
   serverFiles: { name: string; blend: string, url: string }[]
   text: string
   loading: boolean
+  getFileForBlend: (blend: Blend) => void
+  onBlendChange?: (blend: Blend) => void
 }
 
-export function QRTabs({ serverFiles: _serverFiles, text, loading }: QRTabsProps) {
-  const [selectedBlend, setSelectedBlend] = useState(_serverFiles[0]?.blend || '')
+export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, getFileForBlend, onBlendChange }: QRTabsProps) {
+  const [selectedBlend, setSelectedBlend] = useState<Blend>(_serverFiles[0]?.blend as Blend || blends[0])
   const [serverFiles, setServerFiles] = useState(_serverFiles)
+  const [loading, setLoading] = useState(_loading)
+  const [selectedFile, setSelectedFile] = useState(_serverFiles[0])
+
+  useEffect(() => {
+    setLoading(_loading)
+  }, [_loading])
 
   useEffect(() => {
     setServerFiles(_serverFiles)
-    // If the selected blend is no longer in the new serverFiles, select the first available blend
-    if (!_serverFiles.some(file => file.blend === selectedBlend)) {
-      setSelectedBlend(_serverFiles[0]?.blend || '')
-    }
-  }, [_serverFiles, selectedBlend])
+    const file = _serverFiles.find(f => f.blend === selectedBlend)
+    setSelectedFile(file || _serverFiles[0])
+    setLoading(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_serverFiles])
 
   if (serverFiles.length === 0) {
     return null // or return a placeholder component
   }
 
-  const selectedFile = serverFiles.find(f => f.blend === selectedBlend) || serverFiles[0]
+  const handleSelectedBlendChange = async (value: string) => {
+    setSelectedBlend(value as Blend)
+    onBlendChange?.(value as Blend)
+    console.log('handleSelectedBlendChange', value)
+    const file = _serverFiles.find(f => f.blend === value)
+    if (!file) {
+      console.log('getFileForBlend', value)
+      setLoading(true)
+      getFileForBlend(value as Blend)
+      return
+    }
+    setSelectedFile(file)
+  }
+
 
   return (
     <Tabs
       value={selectedBlend}
-      onValueChange={(value) => {
-        setSelectedBlend(value)
-      }}
+      onValueChange={handleSelectedBlendChange}
       className="w-full"
     >
       <TabsList className="w-full flex-wrap justify-center h-auto min-h-[40px] mb-8">
-        {serverFiles.map((file, index) => (
-          <TabsTrigger key={index} value={file.blend} className="flex-grow-0">
-            {file.blend}
+        {blends.map((blend, index) => (
+          <TabsTrigger key={index} value={blend} className="flex-grow-0">
+            {blend}
           </TabsTrigger>
         ))}
       </TabsList>

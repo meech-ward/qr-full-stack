@@ -1,12 +1,12 @@
 import QRCodeStyling, { type Options } from 'qr-code-styling'
 
-export async function getQrImageBufferBlackAndWhite(text: string, qrOptions: Options) {
+export async function getQrImageBufferBlackAndWhite(qrOptions: Options) {
   const qrCode = new QRCodeStyling({
     ...qrOptions,
     width: 500,
     height: 500,
     type: "svg",
-    data: text,
+    data: qrOptions.data,
     qrOptions: {
       errorCorrectionLevel: "H",
     },
