@@ -15,6 +15,8 @@ export async function generateQrCodeBuffer(
   return buffer;
 }
 
+const quality = 75;
+
 // New function to generate QR code with specified blend mode
 export async function generateQR(
   qrCodeBuffer: Buffer | ArrayBuffer,
@@ -38,6 +40,7 @@ export async function generateQR(
 
   // Get the dimensions of the QR code
   const qrCodeMetadata = await sharp(qrCodeBuffer).metadata();
+  console.log(`Processing QR code with dimensions ${qrCodeMetadata.width}x${qrCodeMetadata.height}, quality: ${quality}, blend mode: ${blendMode}`);
   const qrCodeWidth = qrCodeMetadata.width!;
   const qrCodeHeight = qrCodeMetadata.height!;
 
@@ -65,7 +68,9 @@ export async function generateQR(
             blend: "add",
           },
         ])
-        .png()
+        .webp({
+          quality: quality,
+        })
         .toBuffer();
       break;
     }
@@ -79,7 +84,9 @@ export async function generateQR(
             blend: "add",
           },
         ])
-        .png()
+        .webp({
+          quality: quality,
+        })
         .toBuffer();
       finalBuffer = qrMasked;
       break;
@@ -110,7 +117,9 @@ export async function generateQR(
             blend: "add",
           },
         ])
-        .png()
+        .webp({
+          quality: quality,
+        })
         .toBuffer();
 
       // Apply multiply blend
@@ -152,7 +161,9 @@ export async function generateQR(
             blend: "add",
           },
         ])
-        .png()
+        .webp({
+          quality: quality,
+        })
         .toBuffer();
 
       // Apply specified blend mode

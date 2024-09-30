@@ -52,7 +52,7 @@ function Index() {
   const uploadMutation = useMutation({
     mutationFn: async () => {
       const qrImageBuffer = await getQrImageBufferBlackAndWhite(text, qrOptions)
-      const qrImageFile = new File([qrImageBuffer], "qr.png", { type: "image/png" })
+      const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
       return createQrCodeServer(
         {
           qrImage: qrImageFile,
@@ -74,10 +74,10 @@ function Index() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { id, type } = await createQrID({ text: text })
+      const { id } = await createQrID({ text: text })
       const url = `${window.location.origin}/s/${id}`
       const qrImageBuffer = await getQrImageBufferBlackAndWhite(url, qrOptions)
-      const qrImageFile = new File([qrImageBuffer], "qr.png", { type: "image/png" })
+      const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
       return createQrCodeServer(
         {
           id: id,
@@ -189,14 +189,14 @@ function Index() {
               </div>
             </div>
           </div>
-          <Button onClick={saveQRCode} className="w-full" disabled={!text}>
+          <Button onClick={saveQRCode} className="w-full" disabled={!text || !file}>
             {uploadMutation.isPending || saveMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Generating...
               </>
             ) : (
-              'Save QR Code'
+              file ? 'Save QR Code' : ''
             )}
           </Button>
         </CardContent>

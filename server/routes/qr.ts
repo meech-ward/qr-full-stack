@@ -33,6 +33,20 @@ function generateShortUrlString(length: number = 6): string {
     .slice(0, length);
 }
 
+function isLikelyUrl(text: string): boolean {
+  // Regular expression to match common URL patterns
+  const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+  
+  // Check if the text starts with a common protocol
+  const hasProtocol = /^(http:\/\/|https:\/\/)/i.test(text);
+  
+  // Check if the text contains a domain-like structure
+  const hasDomainStructure = /^[\w-]+(\.[\w-]+)+/.test(text);
+  
+  return urlPattern.test(text) || hasProtocol || hasDomainStructure;
+}
+
+
 export const qrRoute = new Hono()
   .get("/", async (c) => {
     const qrCodes = await db
@@ -46,8 +60,9 @@ export const qrRoute = new Hono()
   .post("/short-url", zValidator("json", createShortUrlSchema), async (c) => {
     const qrData = await c.req.valid("json");
     const shortString = generateShortUrlString();
-    const type = qrData.text.startsWith("http") ? "url" : "text";
+    const type = isLikelyUrl(qrData.text) ? "url" : "text";
 
+    console.log(`Creating a short URL for ${qrData.text} with type ${type}`);
     await db.insert(qrCodesTable).values({
       id: shortString,
       content: qrData.text,
@@ -71,7 +86,7 @@ export const qrRoute = new Hono()
     if (qrData.save === "true" && qrData.id) {
       // save the initial QR code
       const qrImageId = generateShortUrlString();
-      const fileName = generateRandomHexName() + ".png";
+      const fileName = generateRandomHexName() + ".webp";
 
       // save the file to disk
       const details = await fileOutputHandler({
@@ -109,8 +124,8 @@ export const qrRoute = new Hono()
       "hard-light",
     ] as const;
     for (const blend of blends) {
-      const buffer = await generateQR(qrImageBuffer, bgImageBuffer, blend, 60);
-      const fileName = generateRandomHexName() + ".png";
+      const buffer = await generateQR(qrImageBuffer, bgImageBuffer, blend, 30);
+      const fileName = generateRandomHexName() + ".webp";
       if (qrData.save === "true" && qrData.id) {
         // save to disk
         const details = await fileOutputHandler({
@@ -158,7 +173,8 @@ export const qrRoute = new Hono()
     ]);
 
     if (!qrCode) {
-      return c.notFound();
+      console.error(`QR code not found for id ${id}`);
+      return c.json({ error: "QR code not found" }, 404);
     }
 
     return c.json({ qrCode, qrImages });

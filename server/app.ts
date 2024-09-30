@@ -19,7 +19,7 @@ uploadRoute.get(
     return new Response(file, {
       status: 200,
       headers: {
-        "Content-Type": "image/png",
+        "Content-Type": "image/webp",
       },
     });
   }

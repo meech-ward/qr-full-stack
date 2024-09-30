@@ -3,8 +3,8 @@ import QRCodeStyling, { type Options } from 'qr-code-styling'
 export async function getQrImageBufferBlackAndWhite(text: string, qrOptions: Options) {
   const qrCode = new QRCodeStyling({
     ...qrOptions,
-    width: 600,
-    height: 600,
+    width: 500,
+    height: 500,
     type: "svg",
     data: text,
     qrOptions: {
@@ -20,7 +20,7 @@ export async function getQrImageBufferBlackAndWhite(text: string, qrOptions: Opt
     },
   })
 
-  const qrCodeBuffer = await qrCode.getRawData("png")
+  const qrCodeBuffer = await qrCode.getRawData("webp")
   if (!qrCodeBuffer) {
     throw new Error("QR code buffer is null")
   }

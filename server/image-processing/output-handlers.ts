@@ -21,7 +21,7 @@ export const base64OutputHandler: OutputHandler = async ({
   name,
   blend,
 }) => {
-  const mimeType = "image/png";
+  const mimeType = "image/webp";
   const base64Url = `data:${mimeType};base64,${buffer.toString("base64")}`;
   return { name, blend, url: base64Url };
 };
@@ -60,7 +60,7 @@ export const s3OutputHandler = (s3Config: {
       Bucket: s3Config.bucketName,
       Key: key,
       Body: buffer,
-      ContentType: "image/png",
+      ContentType: "image/webp",
     });
     await s3Client.send(command);
     const url = `https://${s3Config.bucketName}.s3.amazonaws.com/${key}`;

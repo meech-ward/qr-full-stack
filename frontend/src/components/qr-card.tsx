@@ -61,7 +61,7 @@ function BaseQRCodeCard({ title, className, onSave, src, loading }: QRCodeCardPr
                 if (!src) return;
                 const link = document.createElement('a');
                 link.href = src;
-                link.download = 'qr-code.png';
+                link.download = 'qr-code.webp';
                 link.click();
               }}
             >

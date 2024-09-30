@@ -12,7 +12,7 @@ function Index() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-extrabold text-center mb-8 text-foreground">All Codes</h1>
-      <div className="flex flex-wrap gap-8 w-full items-center justify-center">
+      <div className="flex flex-col gap-8 w-full items-center justify-center">
         {allCodes?.map((code) => (
           <QRCodeItem key={code.id} id={code.id} text={code.text} />
         ))}
