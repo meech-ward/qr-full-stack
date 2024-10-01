@@ -12,12 +12,16 @@ import { generateQR } from "../image-processing/qr-gen";
 import {
   base64OutputHandler,
   localFileOutputHandler,
+  s3OutputHandler,
   type ImageDetails,
 } from "../image-processing/output-handlers";
-
+import { logger } from "../lib/logger";
 import crypto from "crypto";
 
 import { blends } from "../shared-types";
+
+const bucketName = process.env.BUCKET_NAME;
+const bucketRegion = process.env.BUCKET_REGION;
 
 function generateRandomHexName(length: number = 16): string {
   return crypto
@@ -37,17 +41,17 @@ function generateShortUrlString(length: number = 6): string {
 
 function isLikelyUrl(text: string): boolean {
   // Regular expression to match common URL patterns
-  const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
-  
+  const urlPattern =
+    /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+
   // Check if the text starts with a common protocol
   const hasProtocol = /^(http:\/\/|https:\/\/)/i.test(text);
-  
+
   // Check if the text contains a domain-like structure
   const hasDomainStructure = /^[\w-]+(\.[\w-]+)+/.test(text);
-  
+
   return urlPattern.test(text) || hasProtocol || hasDomainStructure;
 }
-
 
 export const qrRoute = new Hono()
   .get("/", async (c) => {
@@ -64,7 +68,7 @@ export const qrRoute = new Hono()
     const shortString = generateShortUrlString();
     const type = isLikelyUrl(qrData.text) ? "url" : "text";
 
-    console.log(`Creating a short URL for ${qrData.text} with type ${type}`);
+    logger.info(`Creating a short URL for ${qrData.text} with type ${type}`);
     await db.insert(qrCodesTable).values({
       id: shortString,
       content: qrData.text,
@@ -79,9 +83,15 @@ export const qrRoute = new Hono()
     const bgImageBuffer = await qrData.bgImage?.arrayBuffer();
     const qrImageBuffer = await qrData.qrImage.arrayBuffer();
 
-    const fileOutputHandler = localFileOutputHandler(
-      import.meta.dir + "/../uploads"
-    );
+    logger.info(`bucketName: ${bucketName}, bucketRegion: ${bucketRegion}`);
+    const fileOutputHandler =
+      bucketName && bucketRegion
+        ? s3OutputHandler({
+            bucketName,
+            region: bucketRegion,
+            folder: qrData.id ? `qr-codes/${qrData.id}` : "tmp",
+          })
+        : localFileOutputHandler(import.meta.dir + "/../uploads");
 
     let imageDetails: ImageDetails[] = [];
 
@@ -115,7 +125,7 @@ export const qrRoute = new Hono()
       });
     }
 
-    const blendsToProcess = qrData.blend ? [qrData.blend] : blends
+    const blendsToProcess = qrData.blend ? [qrData.blend] : blends;
 
     // process all other images
     for (const blend of blendsToProcess) {
@@ -129,6 +139,8 @@ export const qrRoute = new Hono()
           blend,
         });
         imageDetails.push(details);
+
+        logger.info(`Saved image with blend ${blend}, file name ${fileName}, url ${details.url}`);
 
         const qrImageId = generateShortUrlString();
 
@@ -158,7 +170,7 @@ export const qrRoute = new Hono()
   .get("/:id", async (c) => {
     const id = c.req.param("id");
 
-    const [qrCode, qrImages] = await Promise.all([
+    let [qrCode, qrImages] = await Promise.all([
       db
         .select()
         .from(qrCodesTable)
@@ -167,12 +179,23 @@ export const qrRoute = new Hono()
       db.select().from(qrImagesTable).where(eq(qrImagesTable.qrCodeId, id)),
     ]);
 
+    type Image = (typeof qrImages)[number] & { url?: string };
+    let images: Image[] = qrImages;
+
+    if (bucketName && bucketRegion) {
+      images = qrImages.map((qrImage) => {
+        const url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/qr-codes/${qrCode.id}/${qrImage.imageName}`;
+        logger.info(`Image URL: ${url}`);
+        return { ...qrImage, url };
+      });
+    }
+
     if (!qrCode) {
-      console.error(`QR code not found for id ${id}`);
+      logger.error(`QR code not found for id ${id}`);
       return c.json({ error: "QR code not found" }, 404);
     }
 
-    return c.json({ qrCode, qrImages });
+    return c.json({ qrCode, qrImages: images });
   })
   .delete("/:id", async (c) => {
     const id = c.req.param("id");

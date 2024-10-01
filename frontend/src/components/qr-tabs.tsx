@@ -7,7 +7,7 @@ type QRTabsProps = {
   serverFiles: { name: string; blend: string, url: string }[]
   text: string
   loading: boolean
-  getFileForBlend: (blend: Blend) => void
+  getFileForBlend?: (blend: Blend) => void
   onBlendChange?: (blend: Blend) => void
 }
 
@@ -41,7 +41,7 @@ export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, get
     if (!file) {
       console.log('getFileForBlend', value)
       setLoading(true)
-      getFileForBlend(value as Blend)
+      getFileForBlend?.(value as Blend)
       return
     }
     setSelectedFile(file)
@@ -55,6 +55,11 @@ export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, get
       className="w-full"
     >
       <TabsList className="w-full flex-wrap justify-center h-auto min-h-[40px] mb-8">
+        {serverFiles.map(file => file.blend).includes('none') && (
+          <TabsTrigger key={0} value="none" className="flex-grow-0">
+            None
+          </TabsTrigger>
+        )}
         {blends.map((blend, index) => (
           <TabsTrigger key={index} value={blend} className="flex-grow-0">
             {blend}

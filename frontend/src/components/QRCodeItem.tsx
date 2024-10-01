@@ -8,7 +8,7 @@ interface QRCodeItemProps {
 
 export function QRCodeItem({ id, text }: QRCodeItemProps) {
   const { data, isLoading } = useQuery(getQrCodeByIDQueryOptions(id));
-  const serverFiles = data?.qrImages.map((image) => ({ name: image.imageName, blend: image.filter, url: `/api/uploads/${image.imageName}` })) || []
+  const serverFiles = data?.qrImages.map((image) => ({ name: image.imageName, blend: image.filter, url: image.url || `/api/uploads/${image.imageName}` })) || []
   return (
     <div>
       <QRTabs serverFiles={serverFiles} text={text} loading={isLoading} />

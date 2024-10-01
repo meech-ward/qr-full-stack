@@ -1,5 +1,6 @@
 import app from "./app";
 import { z } from "zod";
+import { logger } from "./lib/logger";
 
 const ServeEnv = z.object({
   PORT: z
@@ -16,6 +17,6 @@ const server = Bun.serve({
   fetch: app.fetch,
 });
 
-console.log(`Server running on:`);
-console.log(`- Local:   http://localhost:${server.port}`);
-console.log(`- Network: http://${Bun.env.HOST || '0.0.0.0'}:${server.port}`);
+logger.info(`Server running on:`);
+logger.info(`- Local:   http://localhost:${server.port}`);
+logger.info(`- Network: http://${Bun.env.HOST || '0.0.0.0'}:${server.port}`);

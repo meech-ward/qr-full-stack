@@ -1,6 +1,8 @@
 import qr from "qrcode";
 import sharp, { type Blend } from "sharp";
 import PQueue from "p-queue";
+import { logger } from "../lib/logger";
+
 // Function to generate QR code buffer from text input
 export async function generateQrCodeBuffer(
   text: string,
@@ -49,7 +51,7 @@ export async function generateQR(
 
     // Get the dimensions of the QR code
     const qrCodeMetadata = await sharp(qrCodeBuffer).metadata();
-    console.log(
+    logger.info(
       `Processing QR code with dimensions ${qrCodeMetadata.width}x${qrCodeMetadata.height}, quality: ${quality}, blend mode: ${blendMode}`
     );
     const qrCodeWidth = qrCodeMetadata.width!;

@@ -6,8 +6,7 @@
     "dev": "bun run --watch server/index.ts",
     "start": "bun run server/index.ts",
     "migrate": "drizzle-kit migrate",
-    "build": "cd frontend && bun install && bun run build",
-    "postinstall": "cd frontend && bun install"
+    "build": "cd frontend && bun install && bun run build"
   },
   "devDependencies": {
     "@types/bun": "latest",
