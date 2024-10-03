@@ -1,7 +1,7 @@
 import { hc } from "hono/client";
 import { type ApiRoutes } from "@server/app";
 import { queryOptions } from "@tanstack/react-query";
-import { type CreateQrCode } from "@server/shared-types";
+import { type CreateQrCode, type PreviewQrCode } from "@server/shared-types";
 const client = hc<ApiRoutes>("/");
 
 export const api = client.api;
@@ -40,14 +40,20 @@ export async function createQrCode(value: CreateQrCode) {
   if (!res.ok) {
     throw new Error("server error");
   }
-
   const qrFiles = await res.json();
-  // if ('error' in qrFiles) {
-  //   throw new Error(qrFiles.error);
-  // }
   return qrFiles;
 }
 export type CreateQrCodeResponse = Awaited<ReturnType<typeof createQrCode>>
+
+export async function previewQrCode(value: PreviewQrCode) {
+  const res = await api.qr['preview'].$post({ form: value });
+  if (!res.ok) {
+    throw new Error("server error");
+  }
+  const qrFiles = await res.json();
+  return qrFiles;
+}
+export type PreviewQrCodeResponse = Awaited<ReturnType<typeof previewQrCode>>
 
 export async function createQrID({ text }: { text: string }) {
   const res = await api.qr['short-url'].$post({ json: { text: text } });

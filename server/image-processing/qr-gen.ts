@@ -1,16 +1,22 @@
-import qr from "qrcode";
-import sharp, { type Blend } from "sharp";
-import PQueue from "p-queue";
-import { logger } from "../lib/logger";
+import qr from 'qrcode';
+import sharp, { type Blend as SharpBlend } from 'sharp';
+import { type Blend } from '../shared-types';
+import PQueue from 'p-queue';
+import { logger } from '../lib/logger';
+import { sleep } from '../lib/utils';
 
-// Function to generate QR code buffer from text input
+/**
+ * Generates a QR code buffer from text input.
+ * @param text The text to encode in the QR code.
+ * @param options Optional QR code generation options.
+ */
 export async function generateQrCodeBuffer(
   text: string,
-  options?: qr.QRCodeToBufferOptions
+  options?: qr.QRCodeToBufferOptions,
 ): Promise<Buffer> {
   const buffer = await qr.toBuffer(text, {
-    type: "png",
-    errorCorrectionLevel: "H",
+    type: 'png',
+    errorCorrectionLevel: 'H',
     scale: 10,
     ...options,
   });
@@ -18,25 +24,25 @@ export async function generateQrCodeBuffer(
 }
 
 const quality = 75;
-
 const queue = new PQueue({ concurrency: 1 });
+const delayBetweenTasks = 1000;
 
-const delayBetweenTasks = 500;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// New function to generate QR code with specified blend mode
+/**
+ * Generates a QR code image with the specified blend mode.
+ * @param qrCodeBuffer The buffer of the QR code image.
+ * @param imageBuffer The buffer of the background image.
+ * @param blendMode The blend mode to apply.
+ * @param paddingSize Optional padding size.
+ */
 export async function generateQR(
   qrCodeBuffer: Buffer | ArrayBuffer,
   imageBuffer: Buffer | ArrayBuffer,
-  blendMode: "normal" | "dark" | "multiply-dark" | Blend,
-  paddingSize?: number
+  blendMode: Blend | SharpBlend,
+  paddingSize?: number,
 ): Promise<Buffer> {
-  const promise =queue.add(async () => {
+  const result = await queue.add(async () => {
     // Add padding to the QR code buffer if needed
-    qrCodeBuffer =
+    const paddedQrCodeBuffer =
       !paddingSize || paddingSize <= 0
         ? qrCodeBuffer
         : await sharp(qrCodeBuffer)
@@ -50,21 +56,20 @@ export async function generateQR(
             .toBuffer();
 
     // Get the dimensions of the QR code
-    const qrCodeMetadata = await sharp(qrCodeBuffer).metadata();
+    const qrCodeMetadata = await sharp(paddedQrCodeBuffer).metadata();
     logger.info(
-      `Processing QR code with dimensions ${qrCodeMetadata.width}x${qrCodeMetadata.height}, quality: ${quality}, blend mode: ${blendMode}`
+      `Processing QR code with dimensions ${qrCodeMetadata.width}x${qrCodeMetadata.height}, quality: ${quality}, blend mode: ${blendMode}`,
     );
     const qrCodeWidth = qrCodeMetadata.width!;
     const qrCodeHeight = qrCodeMetadata.height!;
 
     // Resize and process the input image
-    const image = sharp(imageBuffer);
-    const processedImage = await image
-      .resize(qrCodeWidth, qrCodeHeight, { fit: "cover" })
+    const processedImage = await sharp(imageBuffer)
+      .resize(qrCodeWidth, qrCodeHeight, { fit: 'cover' })
       .toBuffer();
 
     // Create a mask from the QR code
-    const qrCodeMask = await sharp(qrCodeBuffer)
+    const qrCodeMask = await sharp(paddedQrCodeBuffer)
       .ensureAlpha()
       .threshold(128)
       .toBuffer();
@@ -72,157 +77,81 @@ export async function generateQR(
     let finalBuffer: Buffer;
 
     switch (blendMode) {
-      case "normal": {
+      case 'normal': {
         // Mask the QR code to the normal image
         finalBuffer = await sharp(processedImage)
-          .composite([
-            {
-              input: qrCodeMask,
-              blend: "add",
-            },
-          ])
-          .webp({
-            quality: quality,
-          })
+          .composite([{ input: qrCodeMask, blend: 'add' }])
+          .webp({ quality })
           .toBuffer();
         break;
       }
-      case "dark": {
+      case 'dark': {
         // Darken the image and mask the QR code
-        const qrMasked = await sharp(processedImage)
+        finalBuffer = await sharp(processedImage)
           .modulate({ brightness: 0.7 })
-          .composite([
-            {
-              input: qrCodeMask,
-              blend: "add",
-            },
-          ])
-          .webp({
-            quality: quality,
-          })
+          .composite([{ input: qrCodeMask, blend: 'add' }])
+          .webp({ quality })
           .toBuffer();
-        finalBuffer = qrMasked;
         break;
       }
-      case "multiply-dark": {
-        // Less white background image
-        const processedBackgroundImageLess = await sharp(processedImage)
+      case 'multiply-dark': {
+        // Apply multiply blend
+        const lessBrightImage = await sharp(processedImage)
           .composite([
             {
               input: Buffer.from([255, 255, 255, 50]),
-              raw: {
-                width: 1,
-                height: 1,
-                channels: 4,
-              },
+              raw: { width: 1, height: 1, channels: 4 },
               tile: true,
-              blend: "over",
+              blend: 'over',
             },
           ])
           .toBuffer();
 
-        // Darken the image and mask the QR code
         const qrMasked = await sharp(processedImage)
           .modulate({ brightness: 0.7 })
-          .composite([
-            {
-              input: qrCodeMask,
-              blend: "add",
-            },
-          ])
-          .webp({
-            quality: quality,
-          })
+          .composite([{ input: qrCodeMask, blend: 'add' }])
+          .webp({ quality })
           .toBuffer();
 
-        // Apply multiply blend
-        finalBuffer = await sharp(processedBackgroundImageLess)
-          .composite([
-            {
-              input: qrMasked,
-              blend: "multiply",
-            },
-          ])
+        finalBuffer = await sharp(lessBrightImage)
+          .composite([{ input: qrMasked, blend: 'multiply' }])
           .toBuffer();
         break;
       }
       default: {
-        // For other blend modes: "multiply", "exclusion", "color-burn", "hard-light", etc.
-
-        // Process background image
-        const processedBackgroundImage = await sharp(processedImage)
+        // For other blend modes
+        const backgroundImage = await sharp(processedImage)
           .composite([
             {
               input: Buffer.from([255, 255, 255, 150]),
-              raw: {
-                width: 1,
-                height: 1,
-                channels: 4,
-              },
+              raw: { width: 1, height: 1, channels: 4 },
               tile: true,
-              blend: "over",
+              blend: 'over',
             },
           ])
           .toBuffer();
 
-        // Darken the image and mask the QR code
         const qrMasked = await sharp(processedImage)
           .modulate({ brightness: 0.7 })
-          .composite([
-            {
-              input: qrCodeMask,
-              blend: "add",
-            },
-          ])
-          .webp({
-            quality: quality,
-          })
+          .composite([{ input: qrCodeMask, blend: 'add' }])
+          .webp({ quality })
           .toBuffer();
 
-        // Apply specified blend mode
-        finalBuffer = await sharp(processedBackgroundImage)
-          .composite([
-            {
-              input: qrMasked,
-              blend: blendMode,
-            },
-          ])
+        finalBuffer = await sharp(backgroundImage)
+          .composite([{ input: qrMasked, blend: blendMode as SharpBlend }])
           .toBuffer();
         break;
       }
     }
+
     return finalBuffer;
   });
+
+  // Delay between tasks to prevent overload
   queue.add(() => sleep(delayBetweenTasks));
-  const result = await promise;
+
   if (!result) {
-    throw new Error("Failed to generate QR code");
+    throw new Error('Failed to generate QR code');
   }
   return result;
 }
-
-// Example usage:
-
-// Import or define your image buffer
-// const yourImageBuffer: ArrayBuffer = ...;
-
-// Example usage with blend mode:
-/*
-(async () => {
-  const text = "Your QR code text";
-  const qrCodeBuffer = await generateQrCodeBuffer(text);
-
-  const blendMode: Blend = "multiply"; // or "normal", "dark", "multiply-dark", "exclusion", etc.
-
-  const qrImageBuffer = await generateQR(qrCodeBuffer, yourImageBuffer, blendMode);
-
-  // Now you can use an output handler to store the image
-  const output = await base64OutputHandler({
-    buffer: qrImageBuffer,
-    name: "output-path.png",
-    blend: blendMode,
-  });
-
-  console.log(output);
-})();
-*/

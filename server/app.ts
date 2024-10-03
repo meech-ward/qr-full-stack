@@ -8,33 +8,56 @@ import { logger } from "./lib/logger";
 
 const app = new Hono();
 
-app.use('*', async (c, next) => {
+// Middleware for logging
+app.use("*", async (c, next) => {
   const start = Date.now();
+
+  // Add timing header
+  c.res.headers.set("Server-Timing", "app;dur=0");
+
   await next();
-  const duration = Date.now() - start;
-  logger.info({
-    method: c.req.method,
-    url: c.req.url,
-    status: c.res.status,
-    duration,
-  });
+
+  const end = Date.now();
+  const duration = end - start;
+
+  // Update timing header
+  c.res.headers.set("Server-Timing", `app;dur=${duration}`);
+
+  // Log request details
+  logger.info(
+    {
+      method: c.req.method,
+      path: c.req.path,
+      status: c.res.status,
+      duration,
+    },
+    "Request processed"
+  );
 });
 
+// Error handling middleware
+app.onError((err, c) => {
+  logger.error({
+    err,
+    path: c.req.path,
+    method: c.req.method
+  }, 'An error occurred')
+  return c.text('Internal Server Error', 500)
+})
+
+
 const uploadRoute = new Hono();
-uploadRoute.get(
-  "/:id",
-  async (c) => {
-    const id = c.req.param("id");
-    const path = import.meta.dir + `/uploads/${id}`;
-    const file = Bun.file(path);
-    return new Response(file, {
-      status: 200,
-      headers: {
-        "Content-Type": "image/webp",
-      },
-    });
-  }
-);
+uploadRoute.get("/:id", async (c) => {
+  const id = c.req.param("id");
+  const path = import.meta.dir + `/uploads/${id}`;
+  const file = Bun.file(path);
+  return new Response(file, {
+    status: 200,
+    headers: {
+      "Content-Type": "image/webp",
+    },
+  });
+});
 
 const apiRoutes = app
   .basePath("/api")

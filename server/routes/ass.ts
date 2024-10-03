@@ -9,6 +9,7 @@ import {
 import { eq } from "drizzle-orm";
 import { getConnInfo } from 'hono/bun'
 import { readFileSync } from 'fs';
+import { logger } from "../lib/logger";
 
 
 export const assRoute = new Hono().get("/service", async (c) => {
@@ -49,7 +50,7 @@ function getServiceName() {
             }
         }
     } catch (error) {
-        console.error('Could not determine service name:', error);
+        logger.error('Could not determine service name:', error);
     }
 
     return null;

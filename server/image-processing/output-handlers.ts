@@ -17,7 +17,7 @@ type OutputHandler = (options: {
 }) => Promise<ImageDetails>;
 
 // Base64 Output Handler
-export const base64OutputHandler: OutputHandler = async ({
+export const base64OutputHandler = (): OutputHandler => async ({
   buffer,
   name,
   blend,

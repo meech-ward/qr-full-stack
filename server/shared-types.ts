@@ -2,7 +2,7 @@
 import { z } from "zod";
 
 
-export const blends = [
+const blendsArray = [
   "multiply-dark",
   "multiply",
   "dark",
@@ -11,8 +11,10 @@ export const blends = [
   "exclusion",
   "hard-light",
 ] as const;
+const blendsEnum = z.enum(blendsArray);
+export type Blend = z.infer<typeof blendsEnum>;
+export const blends = blendsArray as unknown as Blend[];
 
-export type Blend = (typeof blends)[number];
 
 
 // export const createQrCodeSchema = insertQrCodeSchema.omit({
@@ -23,14 +25,20 @@ export type Blend = (typeof blends)[number];
 // export type CreateQrCode = z.infer<typeof createQrCodeSchema>;
 
 export const createQrCodeSchema = z.object({
-  id: z.string().optional(),
-  bgImage: z.instanceof(File).optional(),
+  id: z.string(),
+  bgImage: z.instanceof(File),
   qrImage: z.instanceof(File),
-  save: z.enum(["true", "false"]),
-  blend: z.enum(blends).optional(),
 });
 
 export type CreateQrCode = z.infer<typeof createQrCodeSchema>;
+
+export const previewQrCodeSchema = z.object({
+  bgImage: z.instanceof(File),
+  qrImage: z.instanceof(File),
+  blend: blendsEnum.optional(),
+});
+
+export type PreviewQrCode = z.infer<typeof previewQrCodeSchema>;
 
 
 export const createShortUrlSchema = z.object({

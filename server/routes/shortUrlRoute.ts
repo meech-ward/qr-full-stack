@@ -41,7 +41,7 @@ export const shortUrlRoute = new Hono().get("/:id", async (c) => {
 
   if (qrCode.type === "url") {
     logger.info(`Redirecting to ${qrCode.content}`);
-    const hasProtocol = /^[a-zA-Z]+:\/\//.test(qrCode.content);
+    const hasProtocol = /^[a-zA-Z]+:/.test(qrCode.content);
     const url = hasProtocol ? qrCode.content : `https://${qrCode.content}`;
     return c.redirect(url);
   }

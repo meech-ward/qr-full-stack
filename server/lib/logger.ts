@@ -1,10 +1,3 @@
 import pino from 'pino';
 
-export const logger = pino({
-  level: 'info',
-  formatters: {
-    level(label) {
-      return { level: label };
-    },
-  },
-});
+export const logger = pino();

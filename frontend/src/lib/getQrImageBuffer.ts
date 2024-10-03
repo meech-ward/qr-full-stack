@@ -3,8 +3,8 @@ import QRCodeStyling, { type Options } from 'qr-code-styling'
 export async function getQrImageBufferBlackAndWhite(qrOptions: Options) {
   const qrCode = new QRCodeStyling({
     ...qrOptions,
-    width: 500,
-    height: 500,
+    width: qrOptions.width || 500,
+    height: qrOptions.height || 500,
     type: "svg",
     data: qrOptions.data,
     qrOptions: {

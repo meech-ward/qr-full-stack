@@ -14,7 +14,7 @@ import { ColorPicker } from '@/components/color-picker'
 import { useMutation } from '@tanstack/react-query'
 import { QRTabs } from '@/components/qr-tabs'
 import { useDebounce } from '@/lib/useDebounce'
-import { createQrCode as createQrCodeServer, type CreateQrCodeResponse, createQrID } from '@/lib/api'
+import { createQrCode as createQrCodeServer, previewQrCode as previewQrCodeServer, type CreateQrCodeResponse, createQrID } from '@/lib/api'
 import { getQrImageBufferBlackAndWhite } from '@/lib/getQrImageBuffer'
 import { useLocalStorage } from '@/lib/useLocalStorage'
 import { blends, type Blend } from '@server/shared-types'
@@ -52,12 +52,14 @@ function Index() {
 
   const uploadMutation = useMutation({
     mutationFn: async (blend: Blend) => {
-      const qrImageBuffer = await getQrImageBufferBlackAndWhite(qrOptions)
+      if (!file) {
+        throw new Error("No file selected");
+      }
+      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions, width: 400, height: 400 })
       const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
-      return createQrCodeServer(
+      return previewQrCodeServer(
         {
           qrImage: qrImageFile,
-          save: "false",
           blend: blend,
           bgImage: file,
         }
@@ -81,15 +83,17 @@ function Index() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!file) {
+        throw new Error("No file selected");
+      }
       const { id } = await createQrID({ text: text })
       const url = `${window.location.origin}/s/${id}`
-      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions, data: url })
+      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions, data: url, width: 600, height: 600 })
       const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
       return createQrCodeServer(
         {
           id: id,
           qrImage: qrImageFile,
-          save: "true",
           bgImage: file,
         }
       )
