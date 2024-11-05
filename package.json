@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.651.1",
+    "@aws-sdk/rds-signer": "^3.685.0",
     "@hono/zod-validator": "^0.2.2",
     "@loskir/styled-qr-code-node": "^1.5.2",
     "@napi-rs/canvas": "^0.1.55",
