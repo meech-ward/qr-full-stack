@@ -3,6 +3,7 @@ import { z } from "zod";
 import { logger } from "../lib/logger";
 import { type Logger } from "drizzle-orm/logger";
 import { connectWithIamToken, generateIamToken } from "./iam-connect";
+import { getOrGenerateToken } from '../../token-manager';
 
 class MyLogger implements Logger {
   logQuery(query: string, params: unknown[]): void {
@@ -19,7 +20,7 @@ const DbEnv = z.object({
 
 export const ProcessEnv = DbEnv.parse(process.env);
 
-const iamToken = await generateIamToken({
+const iamToken = await getOrGenerateToken({
   host: ProcessEnv.RDS_ENDPOINT,
   user: ProcessEnv.RDS_IAM_USER,
   region: ProcessEnv.RDS_REGION,
