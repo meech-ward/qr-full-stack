@@ -3,7 +3,7 @@ import { z } from "zod";
 import { logger } from "../lib/logger";
 import { type Logger } from "drizzle-orm/logger";
 import { connectWithIamToken, generateIamToken } from "./iam-connect";
-import { getOrGenerateToken } from '../../token-manager';
+import { sql } from "drizzle-orm";
 
 class MyLogger implements Logger {
   logQuery(query: string, params: unknown[]): void {
@@ -20,7 +20,7 @@ const DbEnv = z.object({
 
 export const ProcessEnv = DbEnv.parse(process.env);
 
-const iamToken = await getOrGenerateToken({
+const iamToken = await generateIamToken({
   host: ProcessEnv.RDS_ENDPOINT,
   user: ProcessEnv.RDS_IAM_USER,
   region: ProcessEnv.RDS_REGION,
@@ -35,5 +35,13 @@ const connection = await connectWithIamToken({
 const db = drizzle(connection, { logger: new MyLogger() });
 
 logger.info("Database initialized: MySQL");
+
+const res1 = await connection.execute('select now()')
+console.log(res1)
+console.log('try with drizzle')
+
+const result = await db.execute(sql`select now()`)
+
+console.log(result)
 
 export { db };
