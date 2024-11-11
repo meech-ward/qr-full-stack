@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --watch server/index.ts",
-    "start": "bun run server/index.ts",
-    "migrate": "bun generate-token.ts && drizzle-kit migrate",
+    "start": "bun migrate && bun run server/index.ts",
+    "migrate": "wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem && bun generate-token.ts && drizzle-kit migrate",
     "build": "cd frontend && bun install && bun run build"
   },
   "devDependencies": {
