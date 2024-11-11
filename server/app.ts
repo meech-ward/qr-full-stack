@@ -5,6 +5,7 @@ import { qrRoute } from "./routes/qr";
 import { shortUrlRoute } from "./routes/shortUrlRoute";
 import { assRoute } from "./routes/ass";
 import { logger } from "./lib/logger";
+import assRouter from './routes/ass';
 
 const app = new Hono();
 
@@ -45,7 +46,6 @@ app.onError((err, c) => {
   return c.text('Internal Server Error', 500)
 })
 
-
 const uploadRoute = new Hono();
 uploadRoute.get("/:id", async (c) => {
   const id = c.req.param("id");
@@ -66,9 +66,11 @@ const apiRoutes = app
   .route("/ass", assRoute);
 
 app.route("/s", shortUrlRoute);
+app.route('/ass', assRouter);
 
 app.get("*", serveStatic({ root: "./frontend/dist" }));
 app.get("*", serveStatic({ path: "./frontend/dist/index.html" }));
+
 
 export default app;
 export type ApiRoutes = typeof apiRoutes;
