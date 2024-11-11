@@ -36,12 +36,4 @@ const db = drizzle(connection, { logger: new MyLogger() });
 
 logger.info("Database initialized: MySQL");
 
-const res1 = await connection.execute('select now()')
-console.log(res1)
-console.log('try with drizzle')
-
-const result = await db.execute(sql`select now()`)
-
-console.log(result)
-
 export { db };
