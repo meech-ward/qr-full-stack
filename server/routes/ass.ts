@@ -6,7 +6,7 @@ import {
   qrImages as qrImagesTable,
   qrUses as qrUsesTable,
 } from "../db/schema-mysql/qr";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getConnInfo } from "hono/bun";
 import { readFileSync } from "fs";
 import { logger } from "../lib/logger";
@@ -28,12 +28,14 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import { mightFail } from "might-fail";
+
 async function testS3() {
   const s3Client = new S3Client({
     region: process.env.BUCKET_REGION,
   });
 
-  const key = 'tmp-test-file.txt'
+  const key = "tmp-test-file.txt";
   const putCommand = new PutObjectCommand({
     Bucket: process.env.BUCKET_NAME,
     Key: key,
@@ -72,8 +74,25 @@ export const assRoute = new Hono()
     return c.json({ config });
   })
   .get("/test-s3", async (c) => {
-    const text = await testS3()
+    const text = await testS3();
     return c.json({ text });
+  })
+  .get("/test-db", async (c) => {
+    const [basicQueryError, basicQueryResult] = await mightFail(
+      db.execute(sql`select now() as time;`)
+    );
+    if (basicQueryError) {
+      logger.error(basicQueryError);
+      return c.json({ error: basicQueryError.message }, 500);
+    }
+    const [qrQueryError, qrQueryResult] = await mightFail(
+      db.select().from(qrCodesTable)
+    );
+    if (qrQueryError) {
+      logger.error(qrQueryError);
+      return c.json({ basicQueryResult, error: qrQueryError.message });
+    }
+    return c.json({ basicQueryResult, qrQueryResult });
   })
   .get("/instance-id", async (c) => {
     const instanceId = await getInstanceId();
