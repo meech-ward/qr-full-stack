@@ -6,7 +6,7 @@ export async function generateIamToken({host, user, region}: {host: string, user
     hostname: host,
     port: 3306,
     username: user,
-    region,
+    region: region || 'us-east-1',
   });
 
   return await signer.getAuthToken();

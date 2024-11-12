@@ -90,7 +90,7 @@ export const assRoute = new Hono()
     );
     if (qrQueryError) {
       logger.error(qrQueryError);
-      return c.json({ basicQueryResult, error: qrQueryError.message });
+      return c.json({ basicQueryResult: basicQueryResult[0], error: qrQueryError.message });
     }
     return c.json({ basicQueryResult, qrQueryResult });
   })

@@ -30,6 +30,7 @@ import {
   generateShortUrlString,
   isLikelyUrl,
 } from "../lib/utils";
+import { getSignedUrl } from "../lib/s3";
 
 const bucketName = process.env.BUCKET_NAME;
 const bucketRegion = process.env.BUCKET_REGION;
@@ -206,7 +207,7 @@ export const qrRoute = new Hono()
       .select()
       .from(qrCodesTable)
       .where(eq(qrCodesTable.id, id))
-      .then((res) => res[0]);
+      .then((res: any) => res[0]);
 
     const qrImagesPromise = db
       .select()
@@ -223,15 +224,18 @@ export const qrRoute = new Hono()
       return c.json({ error: "QR code not found" }, 404);
     }
 
-    type Image = (typeof qrImages)[number] & { url?: string };
+    type Image = (typeof qrImages)[number] & { url?: string | null };
     let images: Image[] = qrImages;
 
     if (bucketName && bucketRegion) {
-      images = qrImages.map((qrImage) => {
-        const url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/qr-codes/${qrCode.id}/${qrImage.imageName}`;
-        logger.info(`Image URL: ${url}`);
-        return { ...qrImage, url };
-      });
+      images = await Promise.all(
+        qrImages.map(async (qrImage) => {
+          const key = `qr-codes/${qrCode.id}/${qrImage.imageName}`;
+          const url = await getSignedUrl(key);
+          logger.info(`Generated signed URL for: ${key}`);
+          return { ...qrImage, url };
+        })
+      );
     }
 
     return c.json({ qrCode, qrImages: images });

@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { logger } from "../lib/logger";
+import { uploadToS3, type S3Config } from "../lib/s3";
 
 export type ImageDetails = {
   name: string;
@@ -43,31 +43,10 @@ export const localFileOutputHandler = (
 };
 
 // S3 Output Handler
-export const s3OutputHandler = (s3Config: {
-  bucketName: string;
-  folder?: string;
-  region?: string;
-  credentials?: {
-    accessKeyId: string;
-    secretAccessKey: string;
-  };
-}): OutputHandler => {
-  const s3Client = new S3Client({
-    region: s3Config.region || "us-east-1",
-    credentials: s3Config.credentials,
-  });
-
+export const s3OutputHandler = (s3Config: S3Config): OutputHandler => {
   return async ({ buffer, name, blend }) => {
     logger.info(`S3 Output Handler: name: ${name}, blend: ${blend}`);
-    const key = s3Config.folder ? `${s3Config.folder}/${name}` : name;
-    const command = new PutObjectCommand({
-      Bucket: s3Config.bucketName,
-      Key: key,
-      Body: buffer,
-      ContentType: "image/webp",
-    });
-    await s3Client.send(command);
-    const url = `https://${s3Config.bucketName}.s3.amazonaws.com/${key}`;
+    const url = await uploadToS3(buffer, name, s3Config);
     return { name, blend, url };
   };
 };
