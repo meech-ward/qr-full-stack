@@ -92,7 +92,7 @@ export const assRoute = new Hono()
       logger.error(qrQueryError);
       return c.json({ basicQueryResult: basicQueryResult[0], error: qrQueryError.message });
     }
-    return c.json({ basicQueryResult, qrQueryResult });
+    return c.json({ basicQueryResult: basicQueryResult[0], qrQueryResult });
   })
   .get("/instance-id", async (c) => {
     const instanceId = await getInstanceId();
