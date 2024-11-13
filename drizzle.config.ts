@@ -25,8 +25,6 @@ try {
   console.warn(`Warning: Could not read RDS CA certificate from ${ProcessEnv.RDS_CA_CERT_PATH}`);
 }
 
-console.log({caCert})
-
 export default defineConfig({
   schema: "./server/db/schema-mysql/*",
   dialect: 'mysql',

@@ -13,5 +13,3 @@ const token = await getOrGenerateToken({
   user: ProcessEnv.RDS_IAM_USER,
   region: ProcessEnv.RDS_REGION,
 });
-
-console.log(token);

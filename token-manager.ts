@@ -43,10 +43,9 @@ export async function getOrGenerateToken(config: {
 export function getStoredToken(): string {
   try {
     const token = readFileSync(TOKEN_FILE, "utf-8");
-    console.log({ token });
     return token;
   } catch (error) {
-    console.log(error)
+    console.error(error)
     throw new Error(
       "IAM token not found. Run your application first to generate the token."
     );
