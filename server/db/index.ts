@@ -38,4 +38,4 @@ const db = drizzle(connection, { logger: new MyLogger() });
 
 logger.info("Database initialized: MySQL");
 
-export { db };
+export { db, connection };
