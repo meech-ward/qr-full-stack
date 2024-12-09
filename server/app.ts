@@ -3,7 +3,6 @@ import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { qrRoute } from "./routes/qr";
 import { shortUrlRoute } from "./routes/shortUrlRoute";
-import { assRoute } from "./routes/ass";
 import { logger } from "./lib/logger";
 import assRouter from './routes/ass';
 
@@ -63,7 +62,6 @@ const apiRoutes = app
   .basePath("/api")
   .route("/qr", qrRoute)
   .route("/uploads", uploadRoute)
-  .route("/ass", assRoute);
 
 app.route("/s", shortUrlRoute);
 app.route('/ass', assRouter);

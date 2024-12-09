@@ -182,7 +182,7 @@ export const qrRoute = new Hono()
       blendsToProcess,
       base64OutputHandler(),
       false,
-      30
+      50
     );
   
     c.status(200);
