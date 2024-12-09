@@ -8,7 +8,7 @@ type Value = 'square' | 'dots' | 'rounded' | 'extra-rounded' | 'classy' | 'class
 
 export function QROptions({onValueChange, disabled}: {onValueChange: (value: Value) => void, disabled: boolean}) {
   return (
-    <Tabs className={cn(disabled ? 'opacity-50 pointer-events-none' : '')} defaultValue="square" onValueChange={onValueChange as (value: string) => void}>
+    <Tabs className={cn(disabled ? 'opacity-50 pointer-events-none cursor-not-allowed' : '')} defaultValue="square" onValueChange={onValueChange as (value: string) => void}>
       <TabsList>
         <TabsTrigger value="square">
           <div className="w-4 h-4 border-2 border-current"></div>

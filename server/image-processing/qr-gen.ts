@@ -23,9 +23,9 @@ export async function generateQrCodeBuffer(
   return buffer;
 }
 
-const quality = 75;
+const quality = process.env.IMAGE_QUALITY ? parseInt(process.env.IMAGE_QUALITY) : 75;
 const queue = new PQueue({ concurrency: 1 });
-const delayBetweenTasks = 1000;
+const delayBetweenTasks = process.env.DELAY_BETWEEN_TASKS ? parseInt(process.env.DELAY_BETWEEN_TASKS) : 1000;
 
 /**
  * Generates a QR code image with the specified blend mode.
@@ -46,6 +46,7 @@ export async function generateQR(
       !paddingSize || paddingSize <= 0
         ? qrCodeBuffer
         : await sharp(qrCodeBuffer)
+            // .resize(500, 500)
             .extend({
               top: paddingSize,
               bottom: paddingSize,

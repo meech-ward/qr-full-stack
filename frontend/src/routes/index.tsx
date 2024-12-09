@@ -1,12 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { TextQRCodeCard } from '@/components/qr-card'
-import { Upload, Loader2 } from 'lucide-react'
 import { type Options } from 'qr-code-styling'
 import { toast } from "sonner"
 import { QROptions } from '@/components/card-options'
@@ -18,6 +15,8 @@ import { createQrCode as createQrCodeServer, previewQrCode as previewQrCodeServe
 import { getQrImageBufferBlackAndWhite } from '@/lib/getQrImageBuffer'
 import { useLocalStorage } from '@/lib/useLocalStorage'
 import { blends, type Blend } from '@server/shared-types'
+import { ImageDrop } from '@/components/image-drop'
+import { useNavigate } from '@tanstack/react-router'
 
 // Route component
 export const Route = createFileRoute('/')({
@@ -25,6 +24,9 @@ export const Route = createFileRoute('/')({
 })
 
 function Index() {
+  const navigate = useNavigate({ from: '/' })
+
+
   const [text, setText] = useState('example.com')
   const debouncedText = useDebounce(text, 500);
   const [file, setFile] = useState<File | undefined>(undefined)
@@ -34,8 +36,8 @@ function Index() {
   const [selectedBlend, setSelectedBlend] = useState<Blend>(blends[0])
 
   const [qrOptions, setQrOptions] = useState<Options>({
-    width: 1000,
-    height: 1000,
+    width: import.meta.env.VITE_QR_WIDTH ? parseInt(import.meta.env.VITE_QR_WIDTH) : 500,
+    height: import.meta.env.VITE_QR_HEIGHT ? parseInt(import.meta.env.VITE_QR_HEIGHT) : 500,
     type: "svg",
     data: text,
     qrOptions: {
@@ -55,7 +57,7 @@ function Index() {
       if (!file) {
         throw new Error("No file selected");
       }
-      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions, width: 400, height: 400 })
+      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions })
       const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
       return previewQrCodeServer(
         {
@@ -88,7 +90,7 @@ function Index() {
       }
       const { id } = await createQrID({ text: text })
       const url = `${window.location.origin}/s/${id}`
-      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions, data: url, width: 600, height: 600 })
+      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions, data: url })
       const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
       return createQrCodeServer(
         {
@@ -111,6 +113,7 @@ function Index() {
         data: "",
       }))
       setSelectedBlend(blends[0])
+      navigate({ to: '/my-codes' })
     },
     onError: (error) => {
       toast.error("Error saving QR code. Please try again.", {
@@ -142,124 +145,117 @@ function Index() {
 
 
   const getFileForBlend = useCallback((blend: Blend) => {
-    console.log('getFileForBlend', blend)
     uploadMutation.mutate(blend);
   }, [uploadMutation])
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      setFile(acceptedFiles[0])
-    }
-  }, [])
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'image/*': [] },
-    maxFiles: 1,
-  })
 
   const saveQRCode = () => {
     console.log('saveQRCode')
     saveMutation.mutate()
   }
 
+  const loading = uploadMutation.isPending || saveMutation.isPending
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-extrabold text-center mb-8 text-foreground">Create QR Code</h1>
+      {/* <h1 className="text-4xl font-extrabold text-center mb-8 text-foreground">Create QR Code</h1> */}
+      {/* <div className="gap-6"> */}
       <Card className="bg-card">
-        <CardHeader>
-          <CardTitle>QR Code Generator</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="text-input">Enter your text</Label>
-            <Input
-              id="text-input"
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Enter text for QR code"
+        {/* <CardHeader>
+          <CardTitle>QR Code Text</CardTitle>
+        </CardHeader> */}
+        <CardContent className="space-y-4">
+          <div className="flex gap-x-8 mt-6">
+            <div className="flex flex-col gap-y-2 flex-1">
+              <Label htmlFor="text-input" className='text-xl'>QR Code Text</Label>
+              <Input
+                id="text-input"
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Enter text for QR code"
+                disabled={loading}
+              />
+            </div>
+
+            <ImageDrop
+              onFileSelect={(file) => {
+                setFile(file)
+                setClearFiles(true)
+              }}
+              onFileDelete={() => {
+                setFile(undefined)
+                setClearFiles(true)
+              }}
+              hasFile={!!file}
+              isLoading={uploadMutation.isPending || saveMutation.isPending}
             />
           </div>
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-md p-6 text-center transition-colors duration-200 ease-in-out ${isDragActive ? 'border-primary bg-primary/10' : 'border-border'
-              } h-[180px] flex items-center justify-center`}
-          >
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="space-y-1 text-center">
-                {uploadMutation.isPending || saveMutation.isPending ? (
-                  <>
-                    <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">Uploading...</p>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <div className="flex text-sm text-muted-foreground justify-center">
-                      <label htmlFor="file-upload" className="relative cursor-pointer font-medium text-primary hover:text-primary/80">
-                        <span>Upload a file</span>
-                        <input {...getInputProps()} />
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-          <Button onClick={saveQRCode} className="w-full" disabled={!text || !file || uploadMutation.isPending || saveMutation.isPending}>
-            {uploadMutation.isPending || saveMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              file ? 'Save QR Code' : ''
-            )}
-          </Button>
+
         </CardContent>
       </Card>
 
-      <div className="flex flex-col items-center w-full mt-8">
+      {/* <Card className="bg-card col-span-1">
+          <CardHeader>
+            <CardTitle>Background Image</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ImageDrop 
+              onFileSelect={setFile}
+              isLoading={uploadMutation.isPending || saveMutation.isPending}
+            />
+            
+          </CardContent>
+        </Card> */}
+      {/* </div> */}
 
-        <QRTabs serverFiles={serverFiles} text={text} loading={uploadMutation.isPending || saveMutation.isPending} getFileForBlend={getFileForBlend} onBlendChange={setSelectedBlend} />
+      <div className="flex flex-col items-center w-full mt-6">
+        <QROptions
+          disabled={uploadMutation.isPending || saveMutation.isPending}
+          onValueChange={(value) => {
+            setClearFiles(true)
+            setQrOptions((options) => ({
+              ...options,
+              dotsOptions: { ...options.dotsOptions, type: value },
+            }))
+          }}
+        />
+      </div>
 
-        <div className="flex flex-col md:flex-row items-center justify-center w-full gap-8 mt-8">
-          <ColorPicker
-            defaultValue="#000000"
-            onChange={(color) =>
-              setQrOptions((options) => ({
-                ...options,
-                dotsOptions: { ...options.dotsOptions, color },
-              }))
-            }
-          />
-          <div className="flex flex-col items-center gap-y-8">
-            <QROptions
-              disabled={uploadMutation.isPending || saveMutation.isPending}
-              onValueChange={(value) => {
-                setClearFiles(true)
+      {file && (
+        <div className="flex flex-col items-center w-full mt-6">
+          <QRTabs serverFiles={serverFiles} text={text} loading={loading} getFileForBlend={getFileForBlend} onBlendChange={setSelectedBlend} onSave={saveQRCode} />
+        </div>
+      )}
+
+      {!file && (
+        <div className="flex flex-col items-center w-full mt-6">
+
+          <div className="flex flex-col md:flex-row items-center justify-center w-full gap-8">
+            <ColorPicker
+              defaultValue="#000000"
+              onChange={(color) =>
                 setQrOptions((options) => ({
                   ...options,
-                  dotsOptions: { ...options.dotsOptions, type: value },
+                  dotsOptions: { ...options.dotsOptions, color },
                 }))
-              }}
+              }
             />
-            <TextQRCodeCard title={text} text={text} qrOptions={qrOptions} />
+            <div className="flex flex-col items-center gap-y-8">
+
+              <TextQRCodeCard title={text} text={text} qrOptions={qrOptions} onSave={saveQRCode} />
+            </div>
+            <ColorPicker
+              defaultValue="#FFFFFF"
+              onChange={(color) =>
+                setQrOptions((options) => ({
+                  ...options,
+                  backgroundOptions: { ...options.backgroundOptions, color },
+                }))
+              }
+            />
           </div>
-          <ColorPicker
-            defaultValue="#FFFFFF"
-            onChange={(color) =>
-              setQrOptions((options) => ({
-                ...options,
-                backgroundOptions: { ...options.backgroundOptions, color },
-              }))
-            }
-          />
         </div>
-      </div>
+      )}
     </div>
   )
 }

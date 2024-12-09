@@ -56,7 +56,7 @@ function BaseQRCodeCard({ title, className, onSave, src, loading }: QRCodeCardPr
             <Button
               variant="default"
               className="w-full"
-              disabled={!src}
+              disabled={!src || loading}
               onClick={() => {
                 if (!src) return;
                 const link = document.createElement('a');
@@ -71,7 +71,7 @@ function BaseQRCodeCard({ title, className, onSave, src, loading }: QRCodeCardPr
               <Button
                 variant="default"
                 className="w-full"
-                disabled={!src}
+                disabled={!src || loading}
                 onClick={onSave}
               >
                 Save QR Code
@@ -97,9 +97,9 @@ export function TextQRCodeCard({ text, qrOptions, loading, ...props }: TextQRCod
       ...qrOptions,
       data: text,
     });
-    qrCode.getRawData("png").then((buffer) => {
+    qrCode.getRawData("webp").then((buffer) => {
       if (!buffer) return;
-      const blob = new Blob([buffer], { type: 'image/png' });
+      const blob = new Blob([buffer], { type: 'image/webp' });
       setSrc(URL.createObjectURL(blob));
     });
   }, [text, qrOptions]);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ImageQRCodeCard } from '@/components/qr-card'
 import { blends, type Blend } from '@server/shared-types'
+import { cn } from '@/lib/utils'
 
 type QRTabsProps = {
   serverFiles: { name: string; blend: string, url: string }[]
@@ -9,9 +10,10 @@ type QRTabsProps = {
   loading: boolean
   getFileForBlend?: (blend: Blend) => void
   onBlendChange?: (blend: Blend) => void
+  onSave?: () => void
 }
 
-export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, getFileForBlend, onBlendChange }: QRTabsProps) {
+export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, getFileForBlend, onBlendChange, onSave }: QRTabsProps) {
   const [selectedBlend, setSelectedBlend] = useState<Blend>(_serverFiles[0]?.blend as Blend || blends[0])
   const [serverFiles, setServerFiles] = useState(_serverFiles)
   const [loading, setLoading] = useState(_loading)
@@ -52,7 +54,7 @@ export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, get
     <Tabs
       value={selectedBlend}
       onValueChange={handleSelectedBlendChange}
-      className="w-full"
+      className={cn(loading ? 'opacity-50 pointer-events-none cursor-not-allowed' : '')}
     >
       <TabsList className="w-full flex-wrap justify-center h-auto min-h-[40px] mb-8">
         {serverFiles.map(file => file.blend).includes('none') && (
@@ -66,7 +68,7 @@ export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, get
           </TabsTrigger>
         ))}
       </TabsList>
-      <ImageQRCodeCard title={text} image={`${selectedFile.url}`} loading={loading} />
+      <ImageQRCodeCard title={text} image={`${selectedFile.url}`} loading={loading} onSave={onSave} />
     </Tabs>
   )
 }
