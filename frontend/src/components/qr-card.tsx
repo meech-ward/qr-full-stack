@@ -10,6 +10,7 @@ interface QRCodeCardProps {
   qrOptions?: Options;
   onSave?: () => void;
   loading?: boolean;
+  dontDownload?: boolean;
 }
 
 interface TextQRCodeCardProps extends QRCodeCardProps {
@@ -20,7 +21,7 @@ interface ImageQRCodeCardProps extends QRCodeCardProps {
   image: string;
 }
 
-function BaseQRCodeCard({ title, className, onSave, src, loading }: QRCodeCardProps & { src: string, loading?: boolean }) {
+function BaseQRCodeCard({ title, className, onSave, src, loading, dontDownload }: QRCodeCardProps & { src: string, loading?: boolean }) {
   return (
     <CardContainer className={cn(className)}>
       <CardBody className="bg-popover relative group/card dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[30rem] h-auto rounded-xl p-6 border">
@@ -53,20 +54,22 @@ function BaseQRCodeCard({ title, className, onSave, src, loading }: QRCodeCardPr
             className="w-full flex flex-col gap-y-4"
             translateZ={20}
           >
-            <Button
-              variant="default"
-              className="w-full"
-              disabled={!src || loading}
-              onClick={() => {
-                if (!src) return;
-                const link = document.createElement('a');
-                link.href = src;
-                link.download = 'qr-code.webp';
-                link.click();
-              }}
-            >
-              Download QR Code
-            </Button>
+            {!dontDownload && (
+              <Button
+                variant="default"
+                className="w-full"
+                disabled={!src || loading}
+                onClick={() => {
+                  if (!src) return;
+                  const link = document.createElement('a');
+                  link.href = src;
+                  link.download = 'qr-code.webp';
+                  link.click();
+                }}
+              >
+                Download QR Code
+              </Button>
+            )}
             {onSave && (
               <Button
                 variant="default"

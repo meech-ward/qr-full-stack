@@ -46,7 +46,7 @@ function getFileOutputHandler(qrCodeId?: string) {
       region: bucketRegion,
       folder: qrCodeId ? `qr-codes/${qrCodeId}` : "tmp",
     });
-  }
+  } 
   logger.error("No bucket name or region found, using local file output handler");
   return localFileOutputHandler(import.meta.dir + "/../uploads");
 }
@@ -130,9 +130,11 @@ export const qrRoute = new Hono()
   })
   .post("/", zValidator("form", createQrCodeSchema), async (c) => {
     // save code to db and s3
+    console.log("createQrCodeSchema", createQrCodeSchema);
     const qrData = await c.req.valid("form");
 
-    const bgImageBuffer = await qrData.bgImage.arrayBuffer();
+    const bgImageBuffer =
+      qrData.bgImage && (await qrData.bgImage.arrayBuffer());
     const qrImageBuffer = await qrData.qrImage.arrayBuffer();
 
     logger.info(`bucketName: ${bucketName}, bucketRegion: ${bucketRegion}`);
@@ -159,15 +161,17 @@ export const qrRoute = new Hono()
 
     // Process additional images with blends
     const blendsToProcess = blends;
-    const imageDetails = await processImages(
-      qrImageBuffer,
-      bgImageBuffer,
-      blendsToProcess,
-      fileOutputHandler,
-      true,
-      50,
-      qrData.id
-    );
+    const imageDetails = bgImageBuffer
+      ? await processImages(
+          qrImageBuffer,
+          bgImageBuffer,
+          blendsToProcess,
+          fileOutputHandler,
+          true,
+          50,
+          qrData.id
+        )
+      : [];
 
     // Include the initial image in the response
     imageDetails.unshift(initialDetails);
