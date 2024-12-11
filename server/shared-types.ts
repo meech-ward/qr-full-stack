@@ -26,7 +26,7 @@ export const blends = blendsArray as unknown as Blend[];
 
 export const createQrCodeSchema = z.object({
   id: z.string(),
-  bgImage: z.instanceof(File),
+  bgImage: z.instanceof(File).optional(),
   qrImage: z.instanceof(File),
 });
 

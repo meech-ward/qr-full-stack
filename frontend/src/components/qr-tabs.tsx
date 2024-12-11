@@ -11,9 +11,10 @@ type QRTabsProps = {
   getFileForBlend?: (blend: Blend) => void
   onBlendChange?: (blend: Blend) => void
   onSave?: () => void
+  dontDownload?: boolean
 }
 
-export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, getFileForBlend, onBlendChange, onSave }: QRTabsProps) {
+export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, getFileForBlend, onBlendChange, onSave, dontDownload }: QRTabsProps) {
   const [selectedBlend, setSelectedBlend] = useState<Blend>(_serverFiles[0]?.blend as Blend || blends[0])
   const [serverFiles, setServerFiles] = useState(_serverFiles)
   const [loading, setLoading] = useState(_loading)
@@ -68,7 +69,7 @@ export function QRTabs({ serverFiles: _serverFiles, text, loading: _loading, get
           </TabsTrigger>
         ))}
       </TabsList>
-      <ImageQRCodeCard title={text} image={`${selectedFile.url}`} loading={loading} onSave={onSave} />
+      <ImageQRCodeCard title={text} image={`${selectedFile.url}`} loading={loading} onSave={onSave} dontDownload={dontDownload} />
     </Tabs>
   )
 }
