@@ -12,9 +12,9 @@ import { useMutation } from '@tanstack/react-query'
 import { QRTabs } from '@/components/qr-tabs'
 import { useDebounce } from '@/lib/useDebounce'
 import { createQrCode as createQrCodeServer, previewQrCode as previewQrCodeServer, type CreateQrCodeResponse, createQrID } from '@/lib/api'
-import { getQrImageBufferBlackAndWhite } from '@/lib/getQrImageBuffer'
+import { getQrImageBuffer, getQrImageBufferBlackAndWhite } from '@/lib/getQrImageBuffer'
 import { useLocalStorage } from '@/lib/useLocalStorage'
-import { blends, type Blend } from '@server/shared-types'
+import { blends, CreateQrCode, type Blend } from '@server/shared-types'
 import { ImageDrop } from '@/components/image-drop'
 import { useNavigate } from '@tanstack/react-router'
 
@@ -85,20 +85,27 @@ function Index() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!file) {
-        throw new Error("No file selected");
-      }
       const { id } = await createQrID({ text: text })
       const url = `${window.location.origin}/s/${id}`
-      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions, data: url })
-      const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
-      return createQrCodeServer(
-        {
+
+      if (!file) {
+        // no image has been uploaded, so send the qr code as is
+        const qrImageBuffer = await getQrImageBuffer({ ...qrOptions, data: url })
+        const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
+        const sendData: CreateQrCode = {
           id: id,
           qrImage: qrImageFile,
-          bgImage: file,
         }
-      )
+        return createQrCodeServer(sendData)
+      }
+      const qrImageBuffer = await getQrImageBufferBlackAndWhite({ ...qrOptions, data: url })
+      const qrImageFile = new File([qrImageBuffer], "qr.webp", { type: "image/webp" })
+      return createQrCodeServer({
+        id: id,
+        qrImage: qrImageFile,
+        bgImage: file,
+      })
+
     },
     onSuccess: (data) => {
       if (data.id) {
@@ -223,7 +230,7 @@ function Index() {
 
       {file && (
         <div className="flex flex-col items-center w-full mt-6">
-          <QRTabs serverFiles={serverFiles} text={text} loading={loading} getFileForBlend={getFileForBlend} onBlendChange={setSelectedBlend} onSave={saveQRCode} />
+          <QRTabs serverFiles={serverFiles} text={text} loading={loading} getFileForBlend={getFileForBlend} onBlendChange={setSelectedBlend} onSave={saveQRCode} dontDownload={true} />
         </div>
       )}
 
@@ -242,7 +249,7 @@ function Index() {
             />
             <div className="flex flex-col items-center gap-y-8">
 
-              <TextQRCodeCard title={text} text={text} qrOptions={qrOptions} onSave={saveQRCode} />
+              <TextQRCodeCard title={text} text={text} qrOptions={qrOptions} onSave={saveQRCode} dontDownload={true} />
             </div>
             <ColorPicker
               defaultValue="#FFFFFF"

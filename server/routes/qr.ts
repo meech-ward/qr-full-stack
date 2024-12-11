@@ -43,10 +43,10 @@ function getFileOutputHandler(qrCodeId?: string) {
     return s3OutputHandler({
       bucketName,
       region: bucketRegion,
-      folder: qrCodeId ? `qr-codes/${qrCodeId}` : 'tmp',
+      folder: qrCodeId ? `qr-codes/${qrCodeId}` : "tmp",
     });
   } else {
-    return localFileOutputHandler(import.meta.dir + '/../uploads');
+    return localFileOutputHandler(import.meta.dir + "/../uploads");
   }
 }
 
@@ -63,15 +63,23 @@ async function processImages(
   qrImageBuffer: ArrayBuffer,
   bgImageBuffer: ArrayBuffer,
   blendsToProcess: Blend[],
-  outputHandler: ReturnType<typeof base64OutputHandler> | ReturnType<typeof s3OutputHandler> | ReturnType<typeof localFileOutputHandler>,
+  outputHandler:
+    | ReturnType<typeof base64OutputHandler>
+    | ReturnType<typeof s3OutputHandler>
+    | ReturnType<typeof localFileOutputHandler>,
   saveToDb: boolean,
   paddingSize: number,
-  qrCodeId?: string, 
+  qrCodeId?: string
 ): Promise<ImageDetails[]> {
   const imageDetails: ImageDetails[] = [];
 
   for (const blend of blendsToProcess) {
-    const buffer = await generateQR(qrImageBuffer, bgImageBuffer, blend, paddingSize);
+    const buffer = await generateQR(
+      qrImageBuffer,
+      bgImageBuffer,
+      blend,
+      paddingSize
+    );
     const fileName = `${generateRandomHexName()}.webp`;
 
     const details = await outputHandler({
@@ -119,63 +127,68 @@ export const qrRoute = new Hono()
 
     return c.json({ id: shortString, type }, 201);
   })
-  .post('/', zValidator('form', createQrCodeSchema), async (c) => {
+  .post("/", zValidator("form", createQrCodeSchema), async (c) => {
     // save code to db and s3
-    const qrData = await c.req.valid('form');
-  
-    const bgImageBuffer = await qrData.bgImage.arrayBuffer();
+    console.log("createQrCodeSchema", createQrCodeSchema);
+    const qrData = await c.req.valid("form");
+
+    const bgImageBuffer =
+      qrData.bgImage && (await qrData.bgImage.arrayBuffer());
     const qrImageBuffer = await qrData.qrImage.arrayBuffer();
-  
+
     logger.info(`bucketName: ${bucketName}, bucketRegion: ${bucketRegion}`);
     const fileOutputHandler = getFileOutputHandler(qrData.id);
-  
+
     // Save the initial QR code image
     const initialQrImageBuffer = Buffer.from(qrImageBuffer);
     const initialFileName = `${generateRandomHexName()}.webp`;
-  
+
     const initialDetails = await fileOutputHandler({
       buffer: initialQrImageBuffer,
       name: initialFileName,
-      blend: 'none',
+      blend: "none",
     });
-  
+
     // Save the initial image to the database
     const initialQrImageId = generateShortUrlString();
     await db.insert(qrImagesTable).values({
       id: initialQrImageId,
       qrCodeId: qrData.id,
       imageName: initialFileName,
-      filter: 'none',
+      filter: "none",
     });
-  
+
     // Process additional images with blends
     const blendsToProcess = blends;
-    const imageDetails = await processImages(
-      qrImageBuffer,
-      bgImageBuffer,
-      blendsToProcess,
-      fileOutputHandler,
-      true,
-      50,
-      qrData.id,
-    );
-  
+    const imageDetails = bgImageBuffer
+      ? await processImages(
+          qrImageBuffer,
+          bgImageBuffer,
+          blendsToProcess,
+          fileOutputHandler,
+          true,
+          50,
+          qrData.id
+        )
+      : [];
+
     // Include the initial image in the response
     imageDetails.unshift(initialDetails);
-  
+
     c.status(201);
     return c.json({
       id: qrData.id,
       files: imageDetails,
     });
-  }).post('/preview', zValidator('form', previewQrCodeSchema), async (c) => {
-    const qrData = await c.req.valid('form');
-  
+  })
+  .post("/preview", zValidator("form", previewQrCodeSchema), async (c) => {
+    const qrData = await c.req.valid("form");
+
     const bgImageBuffer = await qrData.bgImage.arrayBuffer();
     const qrImageBuffer = await qrData.qrImage.arrayBuffer();
-  
+
     const blendsToProcess = qrData.blend ? [qrData.blend] : blends;
-  
+
     const imageDetails = await processImages(
       qrImageBuffer,
       bgImageBuffer,
@@ -184,7 +197,7 @@ export const qrRoute = new Hono()
       false,
       50
     );
-  
+
     c.status(200);
     return c.json({
       files: imageDetails,
