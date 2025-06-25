@@ -8,65 +8,34 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as MyCodesRouteImport } from './routes/my-codes'
+import { Route as IndexRouteImport } from './routes/index'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as MyCodesImport } from './routes/my-codes'
-import { Route as IndexImport } from './routes/index'
-
-// Create/Update Routes
-
-const MyCodesRoute = MyCodesImport.update({
+const MyCodesRoute = MyCodesRouteImport.update({
   id: '/my-codes',
   path: '/my-codes',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-// Populate the FileRoutesByPath interface
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/my-codes': {
-      id: '/my-codes'
-      path: '/my-codes'
-      fullPath: '/my-codes'
-      preLoaderRoute: typeof MyCodesImport
-      parentRoute: typeof rootRoute
-    }
-  }
-}
-
-// Create and export the route tree
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/my-codes': typeof MyCodesRoute
 }
-
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/my-codes': typeof MyCodesRoute
 }
-
 export interface FileRoutesById {
-  __root__: typeof rootRoute
+  __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/my-codes': typeof MyCodesRoute
 }
-
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths: '/' | '/my-codes'
@@ -75,37 +44,34 @@ export interface FileRouteTypes {
   id: '__root__' | '/' | '/my-codes'
   fileRoutesById: FileRoutesById
 }
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MyCodesRoute: typeof MyCodesRoute
+}
+
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/my-codes': {
+      id: '/my-codes'
+      path: '/my-codes'
+      fullPath: '/my-codes'
+      preLoaderRoute: typeof MyCodesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+  }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MyCodesRoute: MyCodesRoute,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/my-codes"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/my-codes": {
-      "filePath": "my-codes.tsx"
-    }
-  }
-}
-ROUTE_MANIFEST_END */
